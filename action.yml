@@ -18,7 +18,7 @@ inputs:
     required: false
     default: false
   minimum_tags:
-    descritpion: "Minimum number of tags to keep"
+    description: "Minimum number of tags to keep"
     required: false
     default: false
   default_branches:
@@ -26,10 +26,16 @@ inputs:
     required: false
     default: main,master
   extra_protected_branch_regex:
-    description: "grep extended (ERE) compatible regex for additional branches to exclude"
+    description: "grep extended (ERE) compatible regex for additional branches to exclude. Prioritised over inclusions."
     required: false
   extra_protected_tag_regex:
-    description: "grep extended (ERE) compatible regex for additional tags to exclude"
+    description: "grep extended (ERE) compatible regex for additional tags to exclude. Prioritised over inclusions."
+    required: false
+  extra_included_branch_regex:
+    description: "grep extended (ERE) compatible regex for additional branches to include"
+    required: false
+  extra_included_tag_regex:
+    description: "grep extended (ERE) compatible regex for additional tags to include"
     required: false
   exclude_open_pr_branches:
     description: "Exclude branches that have an open pull request"

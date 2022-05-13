@@ -2,8 +2,14 @@
 
 set -eo pipefail
 
-[[ -n ${INPUT_REPO_TOKEN} ]] || { echo "Please set the REPO_TOKEN input"; exit 1; }
-[[ -n ${INPUT_DATE} ]] || { echo "Please specify a suitable date input for branch filtering"; exit 1; }
+[[ -n ${INPUT_REPO_TOKEN} ]] || {
+    echo "Please set the REPO_TOKEN input"
+    exit 1
+}
+[[ -n ${INPUT_DATE} ]] || {
+    echo "Please specify a suitable date input for branch filtering"
+    exit 1
+}
 
 BASE_URI="https://api.github.com"
 REPO="${GITHUB_REPOSITORY}"
@@ -14,7 +20,9 @@ DELETE_TAGS=${INPUT_DELETE_TAGS:-false}
 MINIMUM_TAGS=${INPUT_MINIMUM_TAGS:-0}
 DEFAULT_BRANCHES=${INPUT_DEFAULT_BRANCHES:-main,master}
 EXCLUDE_BRANCH_REGEX=${INPUT_EXTRA_PROTECTED_BRANCH_REGEX:-^$}
+INCLUDE_BRANCH_REGEX=${INPUT_EXTRA_INCLUDED_BRANCH_REGEX:-^$}
 EXCLUDE_TAG_REGEX=${INPUT_EXTRA_PROTECTED_TAG_REGEX:-^$}
+INCLUDE_TAG_REGEX=${INPUT_EXTRA_INCLUDED_TAG_REGEX:-^$}
 EXCLUDE_OPEN_PR_BRANCHES=${INPUT_EXCLUDE_OPEN_PR_BRANCHES:-true}
 
 echo "::set-output name=was_dry_run::${DRY_RUN}"
@@ -44,9 +52,12 @@ branch_protected() {
     # If we got null then something else happened (like no access error etc) so
     # we can't determine the status for the branch
     case ${protected} in
-        null) echo "Unable to determine status for branch: ${br}"; return 0 ;;
-        true) return 0 ;;
-        *) return 1 ;;
+    null)
+        echo "Unable to determine status for branch: ${br}"
+        return 0
+        ;;
+    true) return 0 ;;
+    *) return 1 ;;
     esac
 }
 
@@ -54,8 +65,10 @@ extra_branch_or_tag_protected() {
     local br=${1} ref="${2}"
 
     if [[ "${ref}" == "branch" ]]; then
-        echo "${br}" | grep -qEv "${EXCLUDE_BRANCH_REGEX}"
+        echo "${br}" | grep -qEv "${INCLUDE_BRANCH_REGEX}"
+        echo "${br}" | grep -qE "${EXCLUDE_BRANCH_REGEX}"
     elif [[ "${ref}" == "tag" ]]; then
+        echo "${br}" | grep -qEv "${INCLUDE_TAG_REGEX}"
         echo "${br}" | grep -qE "${EXCLUDE_TAG_REGEX}"
     fi
 
@@ -72,9 +85,9 @@ is_pr_open_on_branch() {
         "${BASE_URI}/repos/${REPO}/pulls" | jq '.[].head.ref' | tr -d '"')
 
     for pr_br in ${open_prs_branches}; do
-      if [[ "${pr_br}" == "${br}" ]]; then
-          return 0
-      fi
+        if [[ "${pr_br}" == "${br}" ]]; then
+            return 0
+        fi
     done
 
     return 1
@@ -88,14 +101,15 @@ delete_branch_or_tag() {
     echo "To recreate run: git branch '${br}' '${sha}'"
     if [[ "${DRY_RUN}" == false ]]; then
         status=$(curl -I -X DELETE -o debug.log -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-                    -w "%{http_code}" "${BASE_URI}/repos/${REPO}/git/refs/${ref}/${br}")
+            -w "%{http_code}" "${BASE_URI}/repos/${REPO}/git/refs/${ref}/${br}")
 
         case ${status} in
-            204) ;;
-            *)  echo "Deletion of branch ${br} failed with http_status=${status}"
-                echo "===== Dumping curl call ====="
-                [[ -f debug.log ]] && cat debug.log
-                ;;
+        204) ;;
+        *)
+            echo "Deletion of branch ${br} failed with http_status=${status}"
+            echo "===== Dumping curl call ====="
+            [[ -f debug.log ]] && cat debug.log
+            ;;
         esac
     else
         echo "dry-run mode. Nothing changed!"
@@ -127,7 +141,7 @@ main() {
                     delete_branch_or_tag "${br}" "tags"
                 else
                     echo "Not deleting tag ${br} due to minimum tag requirement(min: ${MINIMUM_TAGS})"
-                    ((tag_counter+=1))
+                    ((tag_counter += 1))
                 fi
             fi
         done

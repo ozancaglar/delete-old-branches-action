@@ -1,5 +1,4 @@
 FROM alpine:latest
-LABEL maintainer="markos@chandras.me"
 
 RUN apk add --no-cache bash ca-certificates curl git jq
 
