@@ -40,7 +40,7 @@ jobs:
           dry_run: true
           delete_tags: true
           minimum_tags: 5
-          extra_protected_branch_regex: ^(foo|bar)$
+          extra_included_branch_regex: ^(foo|bar)$
           extra_protected_tag_regex: '^v.*'
           exclude_open_pr_branches: true
 ```
